@@ -1,6 +1,6 @@
 Import-Module AWSPowerShell
 #Set the region of your cloudwatch
-Set-AWSDefaultRegion -Region eu-central-1
+set AWS_DEFAULT_REGION=us-east-1
 
 #Feel free to change this to match any existing namespaces you might have.
 $Namespace = 'service-monitor'
@@ -24,6 +24,7 @@ $instanceDimension.Value = $instanceId;
 
     #Adjust this to  pick up your service or services, this will work fine with multiple services. 
     $runningServices = Get-Service -Name MSSQLSERVER | ? { $_.Status -eq 'Running' }
+    $notrunningServices = Get-Service -Name MSSQLSERVER | ? { $_.Status -ne 'Running' }
     $runningServices | Out-File -FilePath $logpath -Append
 
     # For each running service, add a metric to metrics collection that adds a data point to a CloudWatch Metric named 'Status' with dimensions: instanceid, servicename
@@ -51,6 +52,34 @@ $instanceDimension.Value = $instanceId;
         Write-Output "$metrics" | Out-File -FilePath $logpath -Append   
 
         Write-Output "Service: $($_.Name) is running" | Out-File -FilePath $logpath -Append
+    }
+
+
+	    # For each not running service, add a metric to metrics collection that adds a data point to a CloudWatch Metric named 'Status' with dimensions: instanceid, servicename
+        $notrunningServices | % { 
+        $dimensions = @();
+
+        $serviceDimension = New-Object -TypeName Amazon.CloudWatch.Model.Dimension;
+        $serviceDimension.Name = "service"
+        $serviceDimension.Value = $_.Name;
+
+        Write-Output "SD = $($serviceDimension.Value)" | Out-File -FilePath $logpath -Append  
+
+        $dimensions += $instanceDimension;
+        $dimensions += $serviceDimension;
+
+        $metric = New-Object -TypeName Amazon.CloudWatch.Model.MetricDatum;
+        $metric.Timestamp = [DateTime]::UtcNow;
+        $metric.MetricName = 'Status';
+        $metric.Value = 0;
+        $metric.Dimensions = $dimensions;
+
+
+        $metrics += $metric;    
+        
+        Write-Output "$metrics" | Out-File -FilePath $logpath -Append   
+
+        Write-Output "Service: $($_.Name) is not running!" | Out-File -FilePath $logpath -Append
     }
 
     # This cmdlet doesn't fail gracefully so we will run it in a try / catch. 
