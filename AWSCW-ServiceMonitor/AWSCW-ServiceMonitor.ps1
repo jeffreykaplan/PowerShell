@@ -6,7 +6,7 @@ set AWS_DEFAULT_REGION=us-east-1
 $Namespace = 'service-monitor'
 
 #Update the log path, use this for troubleshooting. 
-$logpath = "C:\Scripts\Slog.txt"
+$logpath = "C:\scripts\Service-log.txt"
 
 
 #Use an AWS Service to get this systems Instance ID
@@ -26,6 +26,7 @@ $instanceDimension.Value = $instanceId;
     $runningServices = Get-Service -Name MSSQLSERVER | ? { $_.Status -eq 'Running' }
     $notrunningServices = Get-Service -Name MSSQLSERVER | ? { $_.Status -ne 'Running' }
     $runningServices | Out-File -FilePath $logpath -Append
+    $notrunningServices | Out-File -FilePath $logpath -Append
 
     # For each running service, add a metric to metrics collection that adds a data point to a CloudWatch Metric named 'Status' with dimensions: instanceid, servicename
         $runningServices | % { 
@@ -55,7 +56,7 @@ $instanceDimension.Value = $instanceId;
     }
 
 
-	    # For each not running service, add a metric to metrics collection that adds a data point to a CloudWatch Metric named 'Status' with dimensions: instanceid, servicename
+	# For each not running service, add a metric to metrics collection that adds a data point to a CloudWatch Metric named 'Status' with dimensions: instanceid, servicename
         $notrunningServices | % { 
         $dimensions = @();
 
